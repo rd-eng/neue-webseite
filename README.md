@@ -10,8 +10,21 @@ npm run build     # baut die Seite nach dist/
 npm run dev       # lokaler Testserver auf http://localhost:4173
 ```
 
-Der `dist/`-Ordner ist komplett eigenständig und kann auf jeden Webserver
-gehostet werden (Netlify, Vercel, GitHub Pages, klassisches Webhosting …).
+## GitHub Pages (Deploy)
+
+Bei jedem Push auf `main` baut die GitHub Action (`.github/workflows/deploy.yml`)
+die Seite und veröffentlicht sie automatisch unter
+**https://rd-eng.github.io/neue-webseite/**
+
+**Bilder direkt auf github.com hochladen (ohne Terminal):**
+1. Repo öffnen → in den Ordner `gallery/portfolio/` (oder eine andere Galerie) navigieren
+2. **Add file → Upload files** → Fotos per Drag & Drop reinziehen
+3. Optional vorher umbenennen: `01-sonnenaufgang.jpg`, `02-nebel.jpg`, … (Nummer = Reihenfolge)
+4. **Commit changes** — die Action baut und veröffentlicht automatisch neu
+
+Später für robinengel.de: In den Repo-Einstellungen unter Pages die Custom Domain
+`robinengel.de` eintragen (und BASE_PATH im Workflow entfernen, wenn die Seite
+in der Domain-Wurzel liegt).
 
 ## Bilder hinzufügen (das ganze "System")
 

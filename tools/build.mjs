@@ -160,7 +160,8 @@ function applyTpl(vars) {
   return out;
 }
 
-function imgSrc(img) { return img.file; }
+const BASE = process.env.BASE_PATH ? process.env.BASE_PATH.replace(/\/$/, "") : "";
+const rel = (p) => (BASE ? BASE + p : p);
 
 function fig(g, img, i) {
   const id = img.id + "-" + (i + 1);
@@ -195,18 +196,20 @@ function renderLayout(g) {
 }
 
 function navHtml(galleries, current) {
-  return galleries.map(g => `<a href="/${g.dir}/${current === g ? '" aria-current="page"' : '"'}>${esc(g.title)}</a>`).join("\n      ");
+  return galleries.map(g => `<a href="${rel("/" + g.dir + "/")}"${current === g ? " aria-current=\"page\"" : ""}>${esc(g.title)}</a>`).join("\n      ");
 }
 
 function buildGalleryPage(g, galleries) {
   return applyTpl({
+    ASSET: rel("/assets"),
+    BRAND_HREF: rel("/"),
     THEME_VARS: themeVars(g.theme),
     PAGE_TITLE: esc(g.title + SITE.titleSuffix),
     DESC: esc(g.description || g.subtitle || SITE.description),
     CANONICAL: esc(SITE.baseUrl + "/" + g.dir + "/"),
     OG_IMAGE: esc(SITE.baseUrl + "/" + g.dir + "/" + encodeURIComponent(g.images[0].origName)),
     NAV: navHtml(galleries, g),
-    CRUMB: `<a href="/">Galerien</a> / ${esc(g.title)}`,
+    CRUMB: `<a href="${rel("/")}">Galerien</a> / ${esc(g.title)}`,
     TITLE: esc(g.title),
     SUBTITLE_BLOCK: g.subtitle ? `<p class="subtitle">${esc(g.subtitle)}</p>` : "",
     GALLERY_SLUG: g.dir,
@@ -220,8 +223,8 @@ function buildGalleryPage(g, galleries) {
 function buildLandingPage(galleries) {
   const cards = galleries.map(g => {
     const img0 = g.images[0];
-    return `<a class="card" href="/${g.dir}/">
-  <div class="card__media"><img src="/${g.dir}/${encodeURIComponent(img0.origName)}" alt="${esc(g.title)}" loading="lazy" width="${Math.round(img0.aspect * 1000)}" height="1000"></div>
+    return `<a class="card" href="${rel("/" + g.dir + "/")}">
+  <div class="card__media"><img src="${rel("/" + g.dir + "/")}${encodeURIComponent(img0.origName)}" alt="${esc(g.title)}" loading="lazy" width="${Math.round(img0.aspect * 1000)}" height="1000"></div>
   <div class="card__body">
     <h2>${esc(g.title)}</h2>
     ${g.subtitle ? `<p>${esc(g.subtitle)}</p>` : ""}
@@ -230,6 +233,8 @@ function buildLandingPage(galleries) {
 </a>`;
   }).join("\n");
   return applyTpl({
+    ASSET: rel("/assets"),
+    BRAND_HREF: rel("/"),
     THEME_VARS: themeVars("light"),
     PAGE_TITLE: esc("Robin Engel · Fotokunst"),
     DESC: esc(SITE.description),

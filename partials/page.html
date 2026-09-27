@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{PAGE_TITLE}}</title>
 <meta name="description" content="{{DESC}}">
-<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="{{ASSET}}/favicon.svg" type="image/svg+xml">
 <link rel="canonical" href="{{CANONICAL}}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="{{SITE_NAME}} · Fotokunst">
@@ -16,13 +16,13 @@
 <meta property="og:image" content="{{OG_IMAGE}}">
 <meta name="twitter:card" content="summary_large_image">
 <style>{{THEME_VARS}}</style>
-<link rel="stylesheet" href="/assets/css/style.css">
-<script src="/assets/js/lightbox.js" defer></script>
+<link rel="stylesheet" href="{{ASSET}}/css/style.css">
+<script src="{{ASSET}}/js/lightbox.js" defer></script>
 </head>
 <body>
 <header class="site-header">
   <div class="wrap header-inner">
-    <a class="brand" href="/">{{SITE_NAME}}<em> · Fotokunst</em></a>
+    <a class="brand" href="{{BRAND_HREF}}">{{SITE_NAME}}<em> · Fotokunst</em></a>
     <nav class="site-nav" aria-label="Hauptnavigation">
       {{NAV}}
     </nav>
