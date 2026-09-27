@@ -8,5 +8,8 @@
     "dev": "node tools/serve.mjs",
     "build": "node tools/build.mjs",
     "check": "node tools/build.mjs --check"
+  },
+  "dependencies": {
+    "sharp": "^0.35.5"
   }
 }
