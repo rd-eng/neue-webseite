@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100"> <rect width="1600" height="1100" fill="url(#g10sky)"/>
+    <defs>
+      <linearGradient id="g10sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#4a6b8a"/><stop offset=".5" stop-color="#7f9db3"/><stop offset="1" stop-color="#b3c6d1"/>
+      </linearGradient>
+      <radialGradient id="g10sun" cx="0.6928086419753086" cy="0.3" r="0.5">
+        <stop offset="0" stop-color="#eef2f4" stop-opacity=".9"/><stop offset="1" stop-color="#eef2f4" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <rect width="1600" height="1100" fill="url(#g10sun)"/><rect x="200" y="524.4945987654321" width="140" height="575.5054012345679" fill="#4a6b8a" opacity="0.6594821673525377"/><rect x="400" y="385.02263374485597" width="140" height="714.977366255144" fill="#7f9db3" opacity="0.7440106310013718"/><rect x="600" y="245.55066872427983" width="140" height="854.4493312757202" fill="#b3c6d1" opacity="0.8285390946502058"/><rect x="800" y="766.0787037037037" width="140" height="333.92129629629625" fill="#eef2f4" opacity="0.5130675582990398"/><rect x="1000" y="626.6067386831276" width="140" height="473.3932613168724" fill="#4a6b8a" opacity="0.5975960219478738"/><rect x="1200" y="487.1347736625514" width="140" height="612.8652263374486" fill="#7f9db3" opacity="0.6821244855967078"/></svg>

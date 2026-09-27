@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1600" viewBox="0 0 1200 1600"> <rect width="1200" height="1600" fill="url(#g12sky)"/>
+    <defs>
+      <linearGradient id="g12sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#b3803f"/><stop offset=".5" stop-color="#d9a45b"/><stop offset="1" stop-color="#f0c987"/>
+      </linearGradient>
+      <radialGradient id="g12sun" cx="0.74065329218107" cy="0.3" r="0.5">
+        <stop offset="0" stop-color="#fbeed3" stop-opacity=".9"/><stop offset="1" stop-color="#fbeed3" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <rect width="1200" height="1600" fill="url(#g12sun)"/><circle cx="963.5751028806584" cy="360.99451303155007" r="202.24074074074076" fill="#b3803f" opacity="0.3935339506172839"/><circle cx="17.160493827160494" cy="699.1083676268861" r="278.31635802469134" fill="#d9a45b" opacity="0.45693029835390947"/><circle cx="270.74588477366257" cy="1037.2222222222222" r="354.391975308642" fill="#f0c987" opacity="0.5203266460905349"/><circle cx="524.3312757201646" cy="1375.3360768175583" r="70.46759259259258" fill="#fbeed3" opacity="0.2837229938271605"/><circle cx="777.9166666666666" cy="113.44993141289437" r="146.54320987654322" fill="#b3803f" opacity="0.347119341563786"/></svg>
