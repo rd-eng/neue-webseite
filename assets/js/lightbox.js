@@ -103,7 +103,7 @@
       imgEl.dataset.scale = "2.2";
       touch.panX = 0; touch.panY = 0;
       imgEl.style.transition = "transform .25s ease";
-      applyZoom(2.2, 0, 0, true);
+      applyTransform();
       setTimeout(function () { imgEl.style.transition = ""; }, 260);
     }
   }
@@ -145,11 +145,19 @@
   stage.addEventListener("click", function (ev) { if (ev.target === stage) close(); });
 
   // ---------- Touch: Pinch-Zoom, Pan im Zoom, Wischen nur ohne Zoom ----------
+  // Modell: transform = translate(panX, panY) scale(s), Ursprung fix 50%/50%.
+  // translate VOR scale => Pan läuft 1:1 mit dem Finger (Screen-Pixel).
   var touch = { mode: null, x1: 0, y1: 0, x2: 0, y2: 0, dist: 0, scale: 1, panX: 0, panY: 0 };
 
   function dist(t) {
     var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
     return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function applyTransform() {
+    var s = parseFloat(imgEl.dataset.scale || "1") || 1;
+    imgEl.style.transformOrigin = "50% 50%";
+    imgEl.style.transform = "translate(" + touch.panX + "px, " + touch.panY + "px) scale(" + s + ")";
   }
 
   stage.addEventListener("touchstart", function (ev) {
@@ -162,8 +170,9 @@
     } else if (ev.touches.length === 2) {
       touch.mode = "pinch";
       touch.dist = dist(ev.touches);
-      touch.scale = parseFloat(imgEl.dataset.scale || "1") || 1;
-      touch.startScale = touch.scale;
+      touch.startScale = parseFloat(imgEl.dataset.scale || "1") || 1;
+      touch.startPanX = touch.panX;
+      touch.startPanY = touch.panY;
       touch.px = (ev.touches[0].clientX + ev.touches[1].clientX) / 2;
       touch.py = (ev.touches[0].clientY + ev.touches[1].clientY) / 2;
       if (navigator.vibrate) navigator.vibrate(10);
@@ -176,9 +185,23 @@
       ev.preventDefault();
       var d = dist(ev.touches) / touch.dist;
       var s = Math.min(4, Math.max(1, touch.startScale * d));
-      touch.scale = s;
+      // Punkt unter dem Finger-Mittelpunkt fixiert halten:
+      // Anpassung von pan, damit der Anker trotz scale-Änderung ortsfest bleibt.
+      var cx = (ev.touches[0].clientX + ev.touches[1].clientX) / 2;
+      var cy = (ev.touches[0].clientY + ev.touches[1].clientY) / 2;
+      var stageR = stage.getBoundingClientRect();
+      // Bildschirm-Mittelpunkt relativ zum Finger-Anker bei Start:
+      var ax = touch.px - stageR.left - stageR.width / 2 - touch.startPanX;
+      var ay = touch.py - stageR.top - stageR.height / 2 - touch.startPanY;
+      var bx = cx - stageR.left - stageR.width / 2 - touch.startPanX;
+      var by = cy - stageR.top - stageR.height / 2 - touch.startPanY;
+      // Bildpunkt unter dem Anker: p = (anchor - center - startPan) / startScale
+      var px0 = ax / touch.startScale;
+      var py0 = ay / touch.startScale;
+      touch.panX = touch.startPanX + (bx / s - px0) * s;
+      touch.panY = touch.startPanY + (by / s - py0) * s;
       imgEl.dataset.scale = String(s);
-      applyZoom(s, touch.px, touch.py, false);
+      applyTransform();
     } else if (touch.mode === "pan" && ev.touches.length === 1) {
       ev.preventDefault();
       touch.x2 = ev.touches[0].clientX;
@@ -187,7 +210,7 @@
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) touch.moved = true;
       touch.panX += dx; touch.panY += dy;
       touch.x1 = touch.x2; touch.y1 = touch.y2;
-      applyPan(touch.panX, touch.panY);
+      applyTransform();
     } else if (touch.mode === "swipe" && ev.touches.length === 1) {
       touch.x2 = ev.touches[0].clientX;
       touch.y2 = ev.touches[0].clientY;
@@ -200,15 +223,19 @@
       if (ev.touches.length === 0) {
         var s = parseFloat(imgEl.dataset.scale || "1");
         if (s <= 1.05) resetZoom();
-        else zoomed = true;
+        else { zoomed = true; clampPan(); }
         touch.mode = null;
+      } else if (ev.touches.length === 1) {
+        // Ein Finger bleibt: nahtlos in Pan übergehen
+        touch.mode = "pan";
+        touch.x1 = ev.touches[0].clientX;
+        touch.y1 = ev.touches[0].clientY;
+        touch.moved = true;
       }
       return;
     }
     if (touch.mode === "pan" && ev.touches.length === 0) {
-      if (!touch.moved && !zoomed) {
-        toggleZoom();
-      }
+      if (!touch.moved) toggleZoom();
       clampPan();
       touch.mode = null;
       return;
@@ -225,31 +252,24 @@
     }
   }, { passive: true });
 
-  function applyZoom(scale, cx, cy, reset) {
-    var r = stage.getBoundingClientRect();
-    var ox = reset ? 0.5 : (cx - r.left) / r.width;
-    var oy = reset ? 0.5 : (cy - r.top) / r.height;
-    imgEl.style.transformOrigin = (ox * 100) + "% " + (oy * 100) + "%";
-    imgEl.style.transform = "scale(" + scale + ")";
-  }
-
-  function applyPan(dx, dy) {
-    var base = imgEl.style.transformOrigin || "50% 50%";
-    imgEl.style.transform = "scale(" + (parseFloat(imgEl.dataset.scale) || 1) + ") translate(" + dx + "px, " + dy + "px)";
+  function panBounds() {
+    var s = parseFloat(imgEl.dataset.scale || "1") || 1;
+    var stageR = stage.getBoundingClientRect();
+    var overX = Math.max(0, (stageR.width * (s - 1)) / 2);
+    var overY = Math.max(0, (stageR.height * (s - 1)) / 2);
+    return { x: overX, y: overY };
   }
 
   function clampPan() {
-    var s = parseFloat(imgEl.dataset.scale || "1");
-    if (s <= 1) { touch.panX = 0; touch.panY = 0; applyPan(0, 0); return; }
-    var r = imgEl.getBoundingClientRect();
-    var stageR = stage.getBoundingClientRect();
-    var overX = Math.max(0, (r.width - stageR.width) / 2);
-    var overY = Math.max(0, (r.height - stageR.height) / 2);
-    var nx = Math.min(overX, Math.max(-overX, touch.panX));
-    var ny = Math.min(overY, Math.max(-overY, touch.panY));
+    var s = parseFloat(imgEl.dataset.scale || "1") || 1;
+    if (s <= 1) { touch.panX = 0; touch.panY = 0; applyTransform(); return; }
+    var b = panBounds();
+    var nx = Math.min(b.x, Math.max(-b.x, touch.panX));
+    var ny = Math.min(b.y, Math.max(-b.y, touch.panY));
+    if (nx === touch.panX && ny === touch.panY) return;
     touch.panX = nx; touch.panY = ny;
     imgEl.style.transition = "transform .2s ease";
-    applyPan(nx, ny);
+    applyTransform();
     setTimeout(function () { imgEl.style.transition = ""; }, 220);
   }
 
@@ -258,7 +278,7 @@
     imgEl.dataset.scale = "1";
     touch.panX = 0; touch.panY = 0;
     imgEl.style.transition = "transform .25s ease";
-    imgEl.style.transform = "scale(1)";
+    applyTransform();
     setTimeout(function () { imgEl.style.transition = ""; }, 260);
   }
 
