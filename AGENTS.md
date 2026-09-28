@@ -28,6 +28,11 @@ Kein Framework, kein Build-Tooling außer eigenen Node-Skripten.
    - Pinch-Zoom (2 Finger, 1×–4×) um den Finger-Mittelpunkt, Anker bleibt fixiert
    - Nach Gesten-Ende dürfen **synthetische Click-Events** die Lightbox weder
      schließen noch den Zoom resetten (`suppressClickUntil`-Mechanismus)
+   - **Asynchroner Finger-Lift**: Auf echten Geräten heben die Finger beim
+     Pinch NACHEINANDER ab. Die Wahrheitsquelle für „gezoomt" ist daher immer
+     `isZoomed()` (der tatsächliche Scale), NIE das `zoomed`-Flag allein —
+     sonst wertet ein neuer Finger den Zustand als „nicht gezoomt" und
+     blättert statt zu verschieben (Test 6).
    - Pan im Zoom verschiebt das Bild **1:1 mit dem Finger** (Transform-Modell:
      `translate(pan) scale(s)`, Ursprung fix 50%/50% — nicht ändern!)
    - Pinch-Ende mit einem verbleibenden Finger geht nahtlos in Pan über
@@ -57,3 +62,7 @@ Kein Framework, kein Build-Tooling außer eigenen Node-Skripten.
   beim Rückzoomen. Pinch-Ankerung läuft stattdessen über Pan-Kompensation.
 - Browser feuern nach Touch-Gesten oft synthetische Click-Events; ohne
   `suppressClickUntil` würden diese toggleZoom/close triggern.
+- touchend-Sequenzen auf echten Geräten sind asynchron (Finger heben
+  nacheinander ab). jsdom-Tests müssen diese Sequenz explizit simulieren
+  (touchend mit 1 verbleibenden Finger, dann touchend mit 0) — ein Test,
+  der beide Finger simultan hebt, deckt den realen Bug NICHT ab.

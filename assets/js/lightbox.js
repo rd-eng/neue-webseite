@@ -154,6 +154,13 @@
   var touch = { mode: null, x1: 0, y1: 0, x2: 0, y2: 0, dist: 0, scale: 1, panX: 0, panY: 0 };
   var suppressClickUntil = 0;
 
+  // Wahrheitsquelle für "gezoomt" ist immer der tatsächliche Scale,
+  // nicht das zoomed-Flag (Finger heben auf echten Geräten asynchron ab,
+  // dadurch kann der Pinch-Ende-Zweig mit zoomed=true übersprungen werden).
+  function isZoomed() {
+    return (parseFloat(imgEl.dataset.scale || "1") || 1) > 1.05;
+  }
+
   function dist(t) {
     var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
     return Math.sqrt(dx * dx + dy * dy);
@@ -167,7 +174,7 @@
 
   stage.addEventListener("touchstart", function (ev) {
     if (ev.touches.length === 1) {
-      touch.mode = zoomed ? "pan" : "swipe";
+      touch.mode = isZoomed() ? "pan" : "swipe";
       touch.x1 = ev.touches[0].clientX;
       touch.y1 = ev.touches[0].clientY;
       touch.x2 = touch.x1; touch.y2 = touch.y1;
@@ -226,14 +233,16 @@
   stage.addEventListener("touchend", function (ev) {
     if (touch.mode === "pinch") {
       if (ev.touches.length === 0) {
-        var s = parseFloat(imgEl.dataset.scale || "1");
-        if (s <= 1.05) resetZoom();
-        else { zoomed = true; clampPan(); }
+        if (isZoomed()) { zoomed = true; clampPan(); } else resetZoom();
         suppressClickUntil = Date.now() + 600;
         touch.mode = null;
       } else if (ev.touches.length === 1) {
-        // Ein Finger bleibt: nahtlos in Pan übergehen
+        // Ein Finger bleibt: nahtlos in Pan übergehen.
+        // Auf echten Geräten wird der zweite touchend oft NACH diesem
+        // Zweig gefeuert — zoomed hier sofort synchron halten.
+        zoomed = isZoomed();
         touch.mode = "pan";
+        touch.fromPinch = true;
         touch.x1 = ev.touches[0].clientX;
         touch.y1 = ev.touches[0].clientY;
         touch.moved = true;
@@ -241,10 +250,14 @@
       return;
     }
     if (touch.mode === "pan" && ev.touches.length === 0) {
-      if (!touch.moved && ev.target === imgEl) toggleZoom();
+      // Pan-Ende nach Pinch-Fingerwechsel: zoomed ist bereits synchron,
+      // hier nur noch clampen — kein toggleZoom (Finger kam vom Pinch).
+      if (!touch.moved && ev.target === imgEl && !touch.fromPinch) toggleZoom();
+      zoomed = isZoomed();
       clampPan();
       suppressClickUntil = Date.now() + 600;
       touch.mode = null;
+      touch.fromPinch = false;
       return;
     }
     if (touch.mode === "swipe" && ev.touches.length === 0) {

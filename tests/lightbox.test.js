@@ -132,6 +132,35 @@ function check(name, cond, detail) {
   check("Wisch unten schließt", !lb.classList.contains("is-open"));
 }
 
+// ---------- Test 6: Asynchroner Finger-Lift beim Pinch (Real Device!) ----------
+// Auf echten Geräten heben die Finger nacheinander ab: touchend (1 Finger bleibt)
+// und dann touchend (0 Finger). Danach muss ein neuer Finger PAN machen,
+// nicht blättern — und der Zoom muss erhalten bleiben.
+{
+  console.log("\n[6] Asynchrones Pinch-Ende: Finger heben nacheinander ab");
+  const { stage, img, lb, touch, fire, open, doc } = makePage();
+  open(0);
+  // Pinch auf Scale 2
+  fire(stage, "touchstart", touch([{ x: 150, y: 350 }, { x: 250, y: 350 }]));
+  fire(stage, "touchmove", touch([{ x: 100, y: 350 }, { x: 300, y: 350 }]));
+  // Finger 1 hebt ab, Finger 2 bleibt (asynchron!)
+  fire(stage, "touchend", touch([{ x: 300, y: 350 }], [{ x: 100, y: 350 }]));
+  // Finger 2 hebt ebenfalls ab — beide losgelassen
+  fire(stage, "touchend", touch([], [{ x: 300, y: 350 }]));
+  check("Zoom nach asynchronem Pinch-Ende erhalten", parseFloat(img.dataset.scale) > 1.5, "scale=" + img.dataset.scale);
+  check("Lightbox offen nach asynchronem Ende", lb.classList.contains("is-open"));
+  // NEUER Finger startet: muss PAN machen (nicht swipe/blättern!)
+  fire(stage, "touchstart", touch([{ x: 200, y: 350 }]));
+  fire(stage, "touchmove", touch([{ x: 240, y: 350 }]));
+  fire(stage, "touchend", touch([], [{ x: 240, y: 350 }]));
+  const counter = lb.querySelector(".lightbox__counter").textContent;
+  check("Neuer Finger verschiebt (kein Blättern)", counter.includes("1 /"), "counter=" + counter);
+  const m = img.style.transform.match(/translate\(([-\d.]+)px, ([-\d.]+)px\)/);
+  check("Pan wurde angewendet", m && !(parseFloat(m[1]) === 0 && parseFloat(m[2]) === 0), img.style.transform);
+  check("Zoom weiterhin erhalten", parseFloat(img.dataset.scale) > 1.5, "scale=" + img.dataset.scale);
+  check("Lightbox weiterhin offen", lb.classList.contains("is-open"));
+}
+
 // ---------- Test 5: Echter Mausklick toggelt Zoom weiter ----------
 {
   console.log("\n[5] Mausklick aufs Bild toggelt Zoom (Suppression betrifft nur Touch)");
