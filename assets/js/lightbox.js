@@ -140,14 +140,19 @@
     }
   });
 
-  lb.addEventListener("click", function (ev) { if (ev.target === stage) close(); });
+  lb.addEventListener("click", function (ev) { if (ev.target === stage && !zoomed) close(); });
 
-  stage.addEventListener("click", function (ev) { if (ev.target === stage) close(); });
+  stage.addEventListener("click", function (ev) { if (ev.target === stage && !zoomed) close(); });
+
+  lb.addEventListener("click", function (ev) {
+    if (Date.now() < suppressClickUntil) { ev.stopPropagation(); ev.preventDefault(); }
+  }, true);
 
   // ---------- Touch: Pinch-Zoom, Pan im Zoom, Wischen nur ohne Zoom ----------
   // Modell: transform = translate(panX, panY) scale(s), Ursprung fix 50%/50%.
   // translate VOR scale => Pan läuft 1:1 mit dem Finger (Screen-Pixel).
   var touch = { mode: null, x1: 0, y1: 0, x2: 0, y2: 0, dist: 0, scale: 1, panX: 0, panY: 0 };
+  var suppressClickUntil = 0;
 
   function dist(t) {
     var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
@@ -224,6 +229,7 @@
         var s = parseFloat(imgEl.dataset.scale || "1");
         if (s <= 1.05) resetZoom();
         else { zoomed = true; clampPan(); }
+        suppressClickUntil = Date.now() + 600;
         touch.mode = null;
       } else if (ev.touches.length === 1) {
         // Ein Finger bleibt: nahtlos in Pan übergehen
@@ -235,14 +241,17 @@
       return;
     }
     if (touch.mode === "pan" && ev.touches.length === 0) {
-      if (!touch.moved) toggleZoom();
+      if (!touch.moved && ev.target === imgEl) toggleZoom();
       clampPan();
+      suppressClickUntil = Date.now() + 600;
       touch.mode = null;
       return;
     }
     if (touch.mode === "swipe" && ev.touches.length === 0) {
       var dx = touch.x2 - touch.x1, dy = touch.y2 - touch.y1;
+      var wasMoved = touch.moved;
       touch.mode = null;
+      if (wasMoved) suppressClickUntil = Date.now() + 600;
       if (touch.moved === false) return;
       if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
         if (dx < 0) show(current + 1); else show(current - 1);
