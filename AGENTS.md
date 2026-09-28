@@ -52,7 +52,7 @@ Kein Framework, kein Build-Tooling außer eigenen Node-Skripten.
    jedem Commit grün sein. Erzwingt zweierlei:
    - Mindestens **95 %** Statement-Abdeckung in `assets/js/lightbox.js`
    - Coverage darf **nie sinken**: der Floor in `.coverage-floor.json`
-     (aktuell 96.19 %) ist die Untergrenze. Nach neuen Tests mit
+     (aktuell 96.21 %) ist die Untergrenze. Nach neuen Tests mit
      `node tools/coverage.mjs --update-floor` hochsetzen und committen.
    CI führt den Check bei jedem Push aus (eigener Workflow-Step). Wenn ein
    Ratchet einen Change blockiert: zuerst die fehlenden Tests ergänzen,
@@ -79,6 +79,11 @@ Kein Framework, kein Build-Tooling außer eigenen Node-Skripten.
   beim Rückzoomen. Pinch-Ankerung läuft stattdessen über Pan-Kompensation.
 - Browser feuern nach Touch-Gesten oft synthetische Click-Events; ohne
   `suppressClickUntil` würden diese toggleZoom/close triggern.
+- Die Click-Suppression darf NUR Klicks auf Bild/Stage treffen, NIE auf die
+  Steuer-Buttons (Close/Prev/Next) — sonst schließt das X im gezoomten
+  Zustand bzw. direkt nach einer Geste nicht mehr (Test 11). Der
+  Capture-Listener prüft daher `ev.target === imgEl || ev.target === stage`
+  vor stopPropagation.
 - touchend-Sequenzen auf echten Geräten sind asynchron (Finger heben
   nacheinander ab). jsdom-Tests müssen diese Sequenz explizit simulieren
   (touchend mit 1 verbleibenden Finger, dann touchend mit 0) — ein Test,

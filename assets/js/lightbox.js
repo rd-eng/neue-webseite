@@ -142,7 +142,11 @@
   stage.addEventListener("click", function (ev) { if (ev.target === stage && !zoomed) close(); });
 
   lb.addEventListener("click", function (ev) {
-    if (Date.now() < suppressClickUntil) { ev.stopPropagation(); ev.preventDefault(); }
+    if (Date.now() >= suppressClickUntil) return;
+    // Nur Klicks auf Bild/Stage unterdrücken (synthetische Gesten-Clicks),
+    // NIE die Buttons — sonst lässt sich die Lightbox nach einer Geste
+    // nicht mehr per X schließen.
+    if (ev.target === imgEl || ev.target === stage) { ev.stopPropagation(); ev.preventDefault(); }
   }, true);
 
   // ---------- Touch: Pinch-Zoom, Pan im Zoom, Wischen nur ohne Zoom ----------

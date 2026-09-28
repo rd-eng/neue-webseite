@@ -311,6 +311,38 @@ function check(name, cond, detail) {
   check("Lightbox nach übermäßigem Pan offen", lb.classList.contains("is-open"));
 }
 
+// ---------- Test 11: Close-Button muss IMMER schließen (auch gezoomt / nach Geste) ----------
+{
+  console.log("\n[11] X schließt auch im gezoomten Zustand und nach Gesten");
+  const p = makePage();
+  const { lb, img, doc, stage } = p;
+  const clickOn = (el) => el.dispatchEvent(new p.window.Event("click", { bubbles: true, cancelable: true }));
+  // Fall 1: Maus-Klick aufs Bild zoomt, danach muss X noch schließen
+  p.open(0);
+  clickOn(img);
+  check("Zoom aktiv", parseFloat(img.dataset.scale) > 1.5);
+  clickOn(lb.querySelector(".lightbox__close"));
+  check("X schließt im gezoomten Zustand (Maus)", !lb.classList.contains("is-open"));
+  // Fall 2: Pinch-Geste, danach X antippen
+  p.open(0);
+  p.fire(stage, "touchstart", p.touch([{ x: 150, y: 350 }, { x: 250, y: 350 }]));
+  p.fire(stage, "touchmove", p.touch([{ x: 100, y: 350 }, { x: 300, y: 350 }]));
+  p.fire(stage, "touchend", p.touch([], [{ x: 100, y: 350 }, { x: 300, y: 350 }]));
+  check("Zoom nach Pinch", parseFloat(img.dataset.scale) > 1.5);
+  clickOn(lb.querySelector(".lightbox__close"));
+  check("X schließt nach Pinch-Geste (Touch)", !lb.classList.contains("is-open"), "is-open=" + lb.classList.contains("is-open"));
+  // Fall 3: Suppression-Fenster aktiv => X geht trotzdem, Bild-Klick nicht
+  p.open(0);
+  p.fire(stage, "touchstart", p.touch([{ x: 150, y: 350 }, { x: 250, y: 350 }]));
+  p.fire(stage, "touchmove", p.touch([{ x: 100, y: 350 }, { x: 300, y: 350 }]));
+  p.fire(stage, "touchend", p.touch([], [{ x: 100, y: 350 }, { x: 300, y: 350 }]));
+  clickOn(img);
+  check("Synthetischer Bild-Klick nach Geste unschädlich (Zoom bleibt)", parseFloat(img.dataset.scale) > 1.5, "scale=" + img.dataset.scale);
+  check("Lightbox nach Bild-Klick offen", lb.classList.contains("is-open"));
+  clickOn(lb.querySelector(".lightbox__close"));
+  check("X schließt trotz aktivem Suppression-Fenster", !lb.classList.contains("is-open"), "is-open=" + lb.classList.contains("is-open"));
+}
+
 console.log(`\n===== ${passed} bestanden, ${failed} fehlgeschlagen =====`);
 
 // ---- Coverage-Hook: kumulierte Zähler aller jsdom-Windows einsammeln ----
