@@ -50,8 +50,6 @@
   });
   var thumbs = Array.prototype.slice.call(strip.children);
 
-  function figAt(i) { return items[(i + items.length) % items.length]; }
-
   var token = 0;
 
   function show(i, pushState) {
@@ -62,8 +60,7 @@
     var title = f.getAttribute("data-title") || "";
     var thumbNode = f.querySelector("img");
     var thumbSrc = thumbNode ? (thumbNode.currentSrc || thumbNode.src) : full;
-    imgEl.classList.remove("is-zoomed");
-    zoomed = false;
+    resetZoom();
     imgEl.src = thumbSrc;
     imgEl.alt = title;
     var pre = new Image();
@@ -92,8 +89,7 @@
     if (!lb.classList.contains("is-open")) return;
     lb.classList.remove("is-open");
     document.body.style.overflow = "";
-    imgEl.classList.remove("is-zoomed");
-    zoomed = false;
+    resetZoom();
     if (lastFocus && lastFocus.focus) lastFocus.focus();
     if (pushState !== false) {
       try { history.replaceState(null, "", location.pathname); } catch (e) {}
@@ -101,8 +97,15 @@
   }
 
   function toggleZoom() {
-    zoomed = !zoomed;
-    imgEl.classList.toggle("is-zoomed", zoomed);
+    if (zoomed) { resetZoom(); }
+    else {
+      zoomed = true;
+      imgEl.dataset.scale = "2.2";
+      touch.panX = 0; touch.panY = 0;
+      imgEl.style.transition = "transform .25s ease";
+      applyZoom(2.2, 0, 0, true);
+      setTimeout(function () { imgEl.style.transition = ""; }, 260);
+    }
   }
 
   galleryEl.addEventListener("click", function (ev) {
@@ -141,21 +144,131 @@
 
   stage.addEventListener("click", function (ev) { if (ev.target === stage) close(); });
 
-  var touchX = null, touchY = null;
+  // ---------- Touch: Pinch-Zoom, Pan im Zoom, Wischen nur ohne Zoom ----------
+  var touch = { mode: null, x1: 0, y1: 0, x2: 0, y2: 0, dist: 0, scale: 1, panX: 0, panY: 0 };
+
+  function dist(t) {
+    var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
   stage.addEventListener("touchstart", function (ev) {
-    if (ev.touches.length === 1) { touchX = ev.touches[0].clientX; touchY = ev.touches[0].clientY; }
-  }, { passive: true });
-  stage.addEventListener("touchend", function (ev) {
-    if (touchX === null) return;
-    var dx = ev.changedTouches[0].clientX - touchX;
-    var dy = ev.changedTouches[0].clientY - touchY;
-    touchX = null;
-    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
-      if (dx < 0) show(current + 1); else show(current - 1);
-    } else if (dy > 80 && Math.abs(dy) > Math.abs(dx)) {
-      close();
+    if (ev.touches.length === 1) {
+      touch.mode = zoomed ? "pan" : "swipe";
+      touch.x1 = ev.touches[0].clientX;
+      touch.y1 = ev.touches[0].clientY;
+      touch.x2 = touch.x1; touch.y2 = touch.y1;
+      touch.moved = false;
+    } else if (ev.touches.length === 2) {
+      touch.mode = "pinch";
+      touch.dist = dist(ev.touches);
+      touch.scale = parseFloat(imgEl.dataset.scale || "1") || 1;
+      touch.startScale = touch.scale;
+      touch.px = (ev.touches[0].clientX + ev.touches[1].clientX) / 2;
+      touch.py = (ev.touches[0].clientY + ev.touches[1].clientY) / 2;
+      if (navigator.vibrate) navigator.vibrate(10);
     }
-  });
+  }, { passive: true });
+
+  stage.addEventListener("touchmove", function (ev) {
+    if (!touch.mode) return;
+    if (touch.mode === "pinch" && ev.touches.length === 2) {
+      ev.preventDefault();
+      var d = dist(ev.touches) / touch.dist;
+      var s = Math.min(4, Math.max(1, touch.startScale * d));
+      touch.scale = s;
+      imgEl.dataset.scale = String(s);
+      applyZoom(s, touch.px, touch.py, false);
+    } else if (touch.mode === "pan" && ev.touches.length === 1) {
+      ev.preventDefault();
+      touch.x2 = ev.touches[0].clientX;
+      touch.y2 = ev.touches[0].clientY;
+      var dx = touch.x2 - touch.x1, dy = touch.y2 - touch.y1;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) touch.moved = true;
+      touch.panX += dx; touch.panY += dy;
+      touch.x1 = touch.x2; touch.y1 = touch.y2;
+      applyPan(touch.panX, touch.panY);
+    } else if (touch.mode === "swipe" && ev.touches.length === 1) {
+      touch.x2 = ev.touches[0].clientX;
+      touch.y2 = ev.touches[0].clientY;
+      if (Math.abs(touch.x2 - touch.x1) > 10 || Math.abs(touch.y2 - touch.y1) > 10) touch.moved = true;
+    }
+  }, { passive: false });
+
+  stage.addEventListener("touchend", function (ev) {
+    if (touch.mode === "pinch") {
+      if (ev.touches.length === 0) {
+        var s = parseFloat(imgEl.dataset.scale || "1");
+        if (s <= 1.05) resetZoom();
+        else zoomed = true;
+        touch.mode = null;
+      }
+      return;
+    }
+    if (touch.mode === "pan" && ev.touches.length === 0) {
+      if (!touch.moved && !zoomed) {
+        toggleZoom();
+      }
+      clampPan();
+      touch.mode = null;
+      return;
+    }
+    if (touch.mode === "swipe" && ev.touches.length === 0) {
+      var dx = touch.x2 - touch.x1, dy = touch.y2 - touch.y1;
+      touch.mode = null;
+      if (touch.moved === false) return;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+        if (dx < 0) show(current + 1); else show(current - 1);
+      } else if (dy > 80 && Math.abs(dy) > Math.abs(dx)) {
+        close();
+      }
+    }
+  }, { passive: true });
+
+  function applyZoom(scale, cx, cy, reset) {
+    var r = stage.getBoundingClientRect();
+    var ox = reset ? 0.5 : (cx - r.left) / r.width;
+    var oy = reset ? 0.5 : (cy - r.top) / r.height;
+    imgEl.style.transformOrigin = (ox * 100) + "% " + (oy * 100) + "%";
+    imgEl.style.transform = "scale(" + scale + ")";
+  }
+
+  function applyPan(dx, dy) {
+    var base = imgEl.style.transformOrigin || "50% 50%";
+    imgEl.style.transform = "scale(" + (parseFloat(imgEl.dataset.scale) || 1) + ") translate(" + dx + "px, " + dy + "px)";
+  }
+
+  function clampPan() {
+    var s = parseFloat(imgEl.dataset.scale || "1");
+    if (s <= 1) { touch.panX = 0; touch.panY = 0; applyPan(0, 0); return; }
+    var r = imgEl.getBoundingClientRect();
+    var stageR = stage.getBoundingClientRect();
+    var overX = Math.max(0, (r.width - stageR.width) / 2);
+    var overY = Math.max(0, (r.height - stageR.height) / 2);
+    var nx = Math.min(overX, Math.max(-overX, touch.panX));
+    var ny = Math.min(overY, Math.max(-overY, touch.panY));
+    touch.panX = nx; touch.panY = ny;
+    imgEl.style.transition = "transform .2s ease";
+    applyPan(nx, ny);
+    setTimeout(function () { imgEl.style.transition = ""; }, 220);
+  }
+
+  function resetZoom() {
+    zoomed = false;
+    imgEl.dataset.scale = "1";
+    touch.panX = 0; touch.panY = 0;
+    imgEl.style.transition = "transform .25s ease";
+    imgEl.style.transform = "scale(1)";
+    setTimeout(function () { imgEl.style.transition = ""; }, 260);
+  }
+
+  imgEl.addEventListener("touchcancel", function () { touch.mode = null; }, { passive: true });
+  stage.addEventListener("touchcancel", function () { touch.mode = null; }, { passive: true });
+
+  document.addEventListener("gesturestart", function (ev) { if (lb.classList.contains("is-open")) ev.preventDefault(); }, { passive: false });
+  document.addEventListener("gesturechange", function (ev) { if (lb.classList.contains("is-open")) ev.preventDefault(); }, { passive: false });
+  document.addEventListener("gestureend", function (ev) { if (lb.classList.contains("is-open")) ev.preventDefault(); }, { passive: false });
+
 
   window.addEventListener("popstate", function () {
     var m = location.hash.match(/^#(.+)-(\d+)$/);
