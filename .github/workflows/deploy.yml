@@ -23,7 +23,9 @@ jobs:
         with:
           node-version: 22
       - name: Tests (Lightbox-Touch-Logik)
-        run: npm i jsdom && npm test
+        run: npm i jsdom acorn && npm test
+      - name: Coverage (Schwelle 95%, Ratchet)
+        run: npm run coverage
       - name: Build
         run: |
           npm i sharp

@@ -46,6 +46,7 @@ function makePage() {
   // Stage-Geometrie festnageln (jsdom hat kein Layout)
   stage.getBoundingClientRect = () => ({ left: 0, top: 0, width: 400, height: 700, right: 400, bottom: 700 });
   img.getBoundingClientRect = () => ({ left: 100, top: 200, width: 200, height: 300, right: 300, bottom: 500 });
+  (globalThis.__pages = globalThis.__pages || []).push(window);
   return { window, doc, lb, stage, img, touch, fire, open };
 }
 
@@ -172,5 +173,153 @@ function check(name, cond, detail) {
   check("Zweiter Klick resettet Zoom", parseFloat(img.dataset.scale) === 1, "scale=" + img.dataset.scale);
 }
 
+// ---------- Test 7: Buttons (Close/Prev/Next) & Keyboard ----------
+{
+  console.log("\n[7] Buttons & Keyboard-Navigation");
+  const p = makePage();
+  const { lb, doc } = p;
+  p.open(0);
+  check("Lightbox offen", lb.classList.contains("is-open"));
+  lb.querySelector(".lightbox__next").dispatchEvent(new p.window.Event("click", { bubbles: true }));
+  check("Next-Button blättert", lb.querySelector(".lightbox__counter").textContent === "2 / 3", lb.querySelector(".lightbox__counter").textContent);
+  lb.querySelector(".lightbox__prev").dispatchEvent(new p.window.Event("click", { bubbles: true }));
+  check("Prev-Button zurück", lb.querySelector(".lightbox__counter").textContent === "1 / 3");
+  lb.querySelector(".lightbox__close").dispatchEvent(new p.window.Event("click", { bubbles: true }));
+  check("Close-Button schließt", !lb.classList.contains("is-open"));
+  // Keyboard nur bei offener Lightbox
+  p.open(0);
+  const key = (k, extra) => {
+    const e = new p.window.Event("keydown", { bubbles: true, cancelable: true });
+    e.key = k;
+    Object.assign(e, extra || {});
+    doc.dispatchEvent(e);
+    return e;
+  };
+  const counter = () => lb.querySelector(".lightbox__counter").textContent;
+  key("ArrowRight");
+  check("Pfeil rechts blättert", counter() === "2 / 3", counter());
+  key("ArrowLeft");
+  check("Pfeil links zurück", counter() === "1 / 3");
+  key("Home");
+  check("Home -> erstes Bild", counter() === "1 / 3");
+  key("End");
+  check("End -> letztes Bild", counter() === "3 / 3");
+  key("+");
+  check("+ aktiviert Zoom", parseFloat(p.img.dataset.scale) > 1.5, "scale=" + p.img.dataset.scale);
+  key("=");
+  check("= resettet Zoom", parseFloat(p.img.dataset.scale) === 1);
+  key("Escape");
+  check("Esc schließt", !lb.classList.contains("is-open"));
+  // Keydown bei geschlossener Lightbox: kein Effekt
+  key("ArrowRight");
+  check("Keydown bei geschlossen ignoriert", !lb.classList.contains("is-open"));
+  // Tab-Fokus-Falle in der Lightbox
+  p.open(0);
+  const btnClose = lb.querySelector(".lightbox__close");
+  const btnPrev = lb.querySelector(".lightbox__prev");
+  const btnNext = lb.querySelector(".lightbox__next");
+  btnClose.focus();
+  key("Tab", { shiftKey: true });
+  check("Shift+Tab vom Close -> Next", doc.activeElement === btnNext, String(doc.activeElement && doc.activeElement.className));
+  key("Tab");
+  check("Tab vom Next -> Close", doc.activeElement === btnClose);
+  btnNext.focus();
+  key("Tab");
+  check("Tab vom letzten Button -> erster", doc.activeElement === btnClose);
+  key("Escape");
+}
+
+// ---------- Test 8: Thumbnail-Strip, Hint & Full-Bild-Load ----------
+{
+  console.log("\n[8] Thumbnail-Strip & Full-Bild-Preload");
+  const p = makePage();
+  const { lb } = p;
+  p.open(1);
+  const thumbs = lb.querySelectorAll(".lightbox__strip img");
+  check("Thumbnails erzeugt", thumbs.length === 3, String(thumbs.length));
+  check("Aktiver Thumb markiert", thumbs[1].classList.contains("is-active"));
+  check("Titel gesetzt", lb.querySelector(".lightbox__title").textContent === "Bild 2");
+  thumbs[0].dispatchEvent(new p.window.Event("click", { bubbles: true }));
+  check("Thumb-Klick blättert", lb.querySelector(".lightbox__counter").textContent === "1 / 3");
+  check("Hint sichtbar bei offen", lb.querySelector(".lightbox__hint") !== null);
+}
+
+// ---------- Test 9: touchcancel, gesture*, popstate/hashchange, Init-Hash ----------
+{
+  console.log("\n[9] touchcancel, iOS-Gesten, History/Hash");
+  const p = makePage();
+  const { lb, img, stage, doc } = p;
+  p.open(0);
+  // touchcancel setzt Modus zurück
+  p.fire(stage, "touchstart", p.touch([{ x: 200, y: 350 }]));
+  stage.dispatchEvent(new p.window.Event("touchcancel", { bubbles: true }));
+  img.dispatchEvent(new p.window.Event("touchcancel", { bubbles: true }));
+  check("touchcancel ohne Fehler", true);
+  // iOS gesturestart/change/end werden preventDefault't wenn offen
+  const gs = new p.window.Event("gesturestart", { bubbles: true, cancelable: true });
+  doc.dispatchEvent(gs);
+  check("gesturestart preventDefault", gs.defaultPrevented);
+  const gc = new p.window.Event("gesturechange", { bubbles: true, cancelable: true });
+  doc.dispatchEvent(gc);
+  check("gesturechange preventDefault", gc.defaultPrevented);
+  const ge = new p.window.Event("gestureend", { bubbles: true, cancelable: true });
+  doc.dispatchEvent(ge);
+  check("gestureend preventDefault", ge.defaultPrevented);
+  // popstate mit Bild-Hash (#bild-2-3 => idx 2)
+  p.window.history.replaceState(null, "", "/galerie/#bild-2-3");
+  p.window.dispatchEvent(new p.window.Event("popstate"));
+  check("popstate öffnet Bild", lb.querySelector(".lightbox__counter").textContent === "3 / 3", lb.querySelector(".lightbox__counter").textContent);
+  // popstate mit leerem Hash schließt
+  p.window.history.replaceState(null, "", "/galerie/");
+  p.window.dispatchEvent(new p.window.Event("popstate"));
+  check("popstate ohne Hash schließt", !lb.classList.contains("is-open"));
+  // hashchange mit Bild-ID
+  p.open(0);
+  p.window.history.replaceState(null, "", "/galerie/#bild-1");
+  p.window.dispatchEvent(new p.window.Event("hashchange"));
+  check("hashchange zeigt Bild 1", lb.querySelector(".lightbox__counter").textContent === "1 / 3");
+  p.window.history.replaceState(null, "", "/galerie/");
+  p.window.dispatchEvent(new p.window.Event("hashchange"));
+  check("hashchange ohne Hash schließt", !lb.classList.contains("is-open"));
+  // Bühnen-Klick schließt (Stage, nicht gezoomt)
+  p.open(0);
+  stage.dispatchEvent(new p.window.Event("click", { bubbles: true }));
+  check("Klick auf Stage schließt", !lb.classList.contains("is-open"));
+}
+
+// ---------- Test 10: clampPan-Randfälle ----------
+{
+  console.log("\n[10] clampPan: Grenzen werden durchgesetzt");
+  const p = makePage();
+  const { stage, img, lb } = p;
+  p.open(0);
+  // Zoom auf 2, dann weit über die Grenze pannen
+  p.fire(stage, "touchstart", p.touch([{ x: 150, y: 350 }, { x: 250, y: 350 }]));
+  p.fire(stage, "touchmove", p.touch([{ x: 100, y: 350 }, { x: 300, y: 350 }]));
+  p.fire(stage, "touchend", p.touch([], [{ x: 100, y: 350 }, { x: 300, y: 350 }]));
+  check("Zoom aktiv", parseFloat(img.dataset.scale) > 1.5);
+  // Stage 400x700 => overX = 400*(2-1)/2 = 200, overY = 700*(2-1)/2 = 350
+  // Mehrere Pan-Schritte weit über das Maß hinaus
+  for (let k = 0; k < 6; k++) {
+    p.fire(stage, "touchstart", p.touch([{ x: 300, y: 500 }]));
+    p.fire(stage, "touchmove", p.touch([{ x: 30, y: 690 }]));
+    p.fire(stage, "touchend", p.touch([], [{ x: 30, y: 690 }]));
+  }
+  const m = img.style.transform.match(/translate\(([-\d.]+)px, ([-\d.]+)px\)/);
+  check("Pan auf overX begrenzt", m && Math.abs(parseFloat(m[1])) <= 201, "panX=" + (m && m[1]));
+  check("Pan auf overY begrenzt", m && Math.abs(parseFloat(m[2])) <= 351, "panY=" + (m && m[2]));
+  check("Lightbox nach übermäßigem Pan offen", lb.classList.contains("is-open"));
+}
+
 console.log(`\n===== ${passed} bestanden, ${failed} fehlgeschlagen =====`);
+
+// ---- Coverage-Hook: kumulierte Zähler aller jsdom-Windows einsammeln ----
+(function () {
+  const merged = {};
+  for (const w of (globalThis.__pages || [])) {
+    const cov = w.__lightboxCov || {};
+    for (const k of Object.keys(cov)) merged[k] = (merged[k] || 0) + cov[k];
+  }
+  try { require("fs").writeFileSync(__dirname + "/../.coverage-counts.json", JSON.stringify(merged)); } catch (e) {}
+})();
 process.exit(failed ? 1 : 0);

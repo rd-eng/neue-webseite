@@ -110,7 +110,7 @@ a { color: inherit; text-decoration: none; }
   position: absolute; right: 24px; bottom: 18px;
   color: rgba(255,255,255,.7); font-size: .85rem; z-index: 2;
 }
-.lightbox__close, .lightbox__prev, .lightbox__next, .lightbox__zoom {
+.lightbox__close, .lightbox__prev, .lightbox__next {
   position: absolute; z-index: 3;
   background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18);
   color: #fff; width: 44px; height: 44px; border-radius: 50%;
@@ -119,13 +119,12 @@ a { color: inherit; text-decoration: none; }
   transition: background .2s ease, transform .2s ease;
   backdrop-filter: blur(6px);
 }
-.lightbox__close:hover, .lightbox__prev:hover, .lightbox__next:hover, .lightbox__zoom:hover {
+.lightbox__close:hover, .lightbox__prev:hover, .lightbox__next:hover {
   background: rgba(255,255,255,.2); transform: scale(1.06);
 }
 .lightbox__close { top: 18px; right: 18px; }
 .lightbox__prev { left: 18px; top: 50%; transform: translateY(-50%); }
 .lightbox__next { right: 18px; top: 50%; transform: translateY(-50%); }
-.lightbox__zoom { bottom: 18px; right: 76px; }
 .lightbox__strip {
   display: flex; gap: 6px; padding: 10px 16px 14px;
   overflow-x: auto; background: rgba(0,0,0,.4);

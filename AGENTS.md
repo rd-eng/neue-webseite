@@ -48,6 +48,23 @@ Kein Framework, kein Build-Tooling außer eigenen Node-Skripten.
    (`masonry`, `grid`, `rows`, `featured`) plus `theme: light|dark`.
    Bilder: `01-titel.jpg`, `02-titel.jpg`, … (Nummer = Reihenfolge).
 
+6. **Coverage-Ratchet:** `npm run coverage` (`tools/coverage.mjs`) muss bei
+   jedem Commit grün sein. Erzwingt zweierlei:
+   - Mindestens **95 %** Statement-Abdeckung in `assets/js/lightbox.js`
+   - Coverage darf **nie sinken**: der Floor in `.coverage-floor.json`
+     (aktuell 96.19 %) ist die Untergrenze. Nach neuen Tests mit
+     `node tools/coverage.mjs --update-floor` hochsetzen und committen.
+   CI führt den Check bei jedem Push aus (eigener Workflow-Step). Wenn ein
+   Ratchet einen Change blockiert: zuerst die fehlenden Tests ergänzen,
+   nicht den Floor senken.
+7. **Testing-Agent / Skill:** Bei JEDER Änderung an `assets/js/`, `tools/`
+   oder `tests/` vor dem Commit verpflichtend ausführen (entspricht einem
+   viel benutzten Testing-Skill):
+   1. `npm test` → alle Tests grün
+   2. `npm run coverage` → Schwelle erfüllt, Coverage nicht gesunken
+   3. Bei neuem Verhalten: zuerst Test schreiben (rot), dann fixen (grün),
+      dann Floor updaten
+   Nur wenn beides grün ist, gilt ein Change als fertig.
 5. **Deploy:** GitHub Pages, Workflow baut bei Push auf `main` mit
    `BASE_PATH=/neue-webseite`. Für Custom Domain (robinengel.de) BASE_PATH
    entfernen.

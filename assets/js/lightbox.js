@@ -20,7 +20,6 @@
       '<button class="lightbox__close" aria-label="Schließen">✕</button>' +
       '<button class="lightbox__prev" aria-label="Vorheriges Bild">‹</button>' +
       '<button class="lightbox__next" aria-label="Nächstes Bild">›</button>' +
-      '<button class="lightbox__zoom" aria-label="Zoom umschalten">＋</button>' +
       '<div class="lightbox__hint">← → zum Blättern · Esc zum Schließen</div>' +
     "</div>" +
     '<div class="lightbox__strip" role="listbox" aria-label="Vorschaubilder"></div>';
@@ -34,7 +33,6 @@
   var btnClose = lb.querySelector(".lightbox__close");
   var btnPrev = lb.querySelector(".lightbox__prev");
   var btnNext = lb.querySelector(".lightbox__next");
-  var btnZoom = lb.querySelector(".lightbox__zoom");
 
   var current = -1;
   var zoomed = false;
@@ -119,7 +117,6 @@
   btnClose.addEventListener("click", function () { close(); });
   btnPrev.addEventListener("click", function () { show(current - 1); });
   btnNext.addEventListener("click", function () { show(current + 1); });
-  btnZoom.addEventListener("click", toggleZoom);
   imgEl.addEventListener("click", toggleZoom);
 
   document.addEventListener("keydown", function (ev) {
@@ -132,7 +129,7 @@
       case "End": show(items.length - 1); break;
       case "+": case "=": toggleZoom(); break;
       case "Tab":
-        var f = [btnClose, btnPrev, btnNext, btnZoom];
+        var f = [btnClose, btnPrev, btnNext];
         var idx = f.indexOf(document.activeElement);
         if (!ev.shiftKey && idx === f.length - 1) { ev.preventDefault(); f[0].focus(); }
         else if (ev.shiftKey && idx <= 0) { ev.preventDefault(); f[f.length - 1].focus(); }
