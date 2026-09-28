@@ -107,7 +107,8 @@ try {
   if (fs.existsSync(FLOOR_FILE)) {
     floor = JSON.parse(fs.readFileSync(FLOOR_FILE, "utf8")).floor || MIN_COVERAGE;
   }
-  const floorPct = Math.max(MIN_COVERAGE, floor);
+  const floorPct = Number(Math.max(MIN_COVERAGE, floor).toFixed(2));
+  const pctR = Number(pct.toFixed(2));
 
   if (process.argv.includes("--json")) {
     console.log(JSON.stringify({ pct: Number(pct.toFixed(2)), threshold: floorPct, covered, executable, uncovered }));
@@ -118,11 +119,11 @@ try {
     if (uncovered.length) console.log(`Nicht abgedeckt (Zeilen): ${uncovered.slice(0, 40).join(", ")}${uncovered.length > 40 ? " …" : ""}`);
   }
 
-  if (pct < floorPct) {
+  if (pctR < floorPct) {
     console.error(`\n❌ Coverage ${pct.toFixed(2)}% unter Schwelle ${floorPct}%. Coverage darf nicht sinken!`);
     process.exitCode = 1;
   }
-  if (process.argv.includes("--update-floor") && pct > floor) {
+  if (process.argv.includes("--update-floor") && pctR > floorPct) {
     fs.writeFileSync(FLOOR_FILE, JSON.stringify({ floor: Number(pct.toFixed(2)), updated: new Date().toISOString() }, null, 2) + "\n");
     console.log(`Floor aktualisiert: ${floor}% -> ${pct.toFixed(2)}%`);
   }
